@@ -5,7 +5,8 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct GBBinary {
-    header: Header,
+    pub header: Header,
+    pub bank_data: Vec<Vec<u8>>,
 }
 
 #[derive(Serialize)]
@@ -34,7 +35,7 @@ pub enum SGBFlag {
     SGBSupport,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub enum CartridgeType {
     ROMOnly,
     MBC1,
@@ -66,7 +67,7 @@ pub enum CartridgeType {
     HuC1xRAMxBattery,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Copy, Clone)]
 pub enum ROMSize {
     NoBanking,
     Banks4,
@@ -80,6 +81,23 @@ pub enum ROMSize {
     Banks128,
     Banks256,
     Banks512,
+}
+
+pub fn num_banks(rom_size: ROMSize) -> usize {
+    match rom_size {
+        ROMSize::NoBanking => 2,
+        ROMSize::Banks4 => 4,
+        ROMSize::Banks8 => 8,
+        ROMSize::Banks16 => 16,
+        ROMSize::Banks32 => 32,
+        ROMSize::Banks64 => 64,
+        ROMSize::Banks72 => 72,
+        ROMSize::Banks80 => 80,
+        ROMSize::Banks96 => 96,
+        ROMSize::Banks128 => 128,
+        ROMSize::Banks256 => 256,
+        ROMSize::Banks512 => 512,
+    }
 }
 
 #[derive(Serialize)]
@@ -114,14 +132,17 @@ pub struct Header {
     pub global_checksum: u16,
 }
 
-const NEW_LICENCSEE_CODE_VAL: u8 = 0x33;
+pub const NEW_LICENCSEE_CODE_VAL: u8 = 0x33;
+pub const BANK_BYTES: usize = 16 * 1024;
+pub const DATA_START: usize = 0x150;
 
 pub fn load(data: &[u8]) -> Result<GBBinary, String> {
     let mut reader = DataReader::new(data);
     parse_vectors(&mut reader)?;
     let header = parse_header(&mut reader)?;
+    let bank_data = parse_bank_data(&mut reader, header.rom_size)?;
 
-    Ok(GBBinary { header })
+    Ok(GBBinary { header, bank_data })
 }
 
 fn parse_vectors(reader: &mut DataReader) -> Result<(), String> {
@@ -294,4 +315,22 @@ fn parse_old_licensee_code(code: u8) -> LicenseeCode {
 
 fn clean_string(str: &str) -> String {
     str.replace('\0', "")
+}
+
+fn parse_bank_data(reader: &mut DataReader, rom_size: ROMSize) -> Result<Vec<Vec<u8>>, String> {
+    let n = num_banks(rom_size);
+    let mut bank_data = Vec::with_capacity(n);
+    for b in 0..n {
+        let bank_size = if b == (n - 1) {
+            BANK_BYTES - DATA_START
+        } else {
+            BANK_BYTES
+        };
+        let mut bank = Vec::with_capacity(bank_size);
+        for _ in 0..bank_size {
+            bank.push(reader.read_u8());
+        }
+        bank_data.push(bank);
+    }
+    Ok(bank_data)
 }
