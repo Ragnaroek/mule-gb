@@ -118,6 +118,7 @@ pub enum DestinationCode {
 
 #[derive(Serialize)]
 pub struct Header {
+    pub entry_point: [u8; 4],
     pub game_title: String,
     pub manufacturer_code: String,
     pub gbc_flag: GBCFlag,
@@ -146,13 +147,18 @@ pub fn load(data: &[u8]) -> Result<GBBinary, String> {
 }
 
 fn parse_vectors(reader: &mut DataReader) -> Result<(), String> {
-    reader.skip(0xFF);
+    reader.skip(0x100);
     Ok(())
 }
 
 fn parse_header(reader: &mut DataReader) -> Result<Header, String> {
-    reader.skip(4); // entry point
-    reader.skip(49); // logo data
+    let entry_point = [
+        reader.read_u8(),
+        reader.read_u8(),
+        reader.read_u8(),
+        reader.read_u8(),
+    ];
+    reader.skip(48); // logo data
 
     let old_licensee_code = reader.read_u8_at(0x14B);
 
@@ -185,6 +191,7 @@ fn parse_header(reader: &mut DataReader) -> Result<Header, String> {
     let global_checksum = reader.read_u16();
 
     Ok(Header {
+        entry_point,
         game_title,
         manufacturer_code,
         gbc_flag,
