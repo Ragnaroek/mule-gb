@@ -9,7 +9,7 @@ pub struct GBBinary {
     pub bank_data: Vec<Vec<u8>>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub enum LicenseeCode {
     None,
     Unknown,
@@ -19,7 +19,7 @@ pub enum LicenseeCode {
     Namco,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Copy)]
 pub enum GBCFlag {
     /// Not explictely set, only support the GameBoy Classic
     GBOnly,
@@ -29,7 +29,7 @@ pub enum GBCFlag {
     GBCOnly,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Copy)]
 pub enum SGBFlag {
     NoSGB,
     SGBSupport,
@@ -100,7 +100,7 @@ pub fn num_banks(rom_size: ROMSize) -> usize {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Copy, Clone)]
 pub enum RAMSize {
     None,
     KB2,
@@ -110,7 +110,7 @@ pub enum RAMSize {
     KB128,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Copy, Clone)]
 pub enum DestinationCode {
     Japanese,
     NonJapanese,
