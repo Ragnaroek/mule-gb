@@ -5,8 +5,31 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct GBBinary {
+    pub restart_calls: RestartCalls,
+    pub interrupts: Interrupts,
     pub header: Header,
     pub bank_data: Vec<Vec<u8>>,
+}
+
+#[derive(Serialize)]
+pub struct RestartCalls {
+    rst_0: [u8; 8],
+    rst_1: [u8; 8],
+    rst_2: [u8; 8],
+    rst_3: [u8; 8],
+    rst_4: [u8; 8],
+    rst_5: [u8; 8],
+    rst_6: [u8; 8],
+    rst_7: [u8; 8],
+}
+
+#[derive(Serialize)]
+pub struct Interrupts {
+    v_blank: [u8; 8],
+    lcd_stat: [u8; 8],
+    timer: [u8; 8],
+    serial: [u8; 8],
+    joypad: [u8; 8],
 }
 
 #[derive(Serialize, Debug)]
@@ -119,6 +142,7 @@ pub enum DestinationCode {
 #[derive(Serialize)]
 pub struct Header {
     pub entry_point: [u8; 4],
+    pub logo_data: Vec<u8>, // len is always 48
     pub game_title: String,
     pub manufacturer_code: String,
     pub gbc_flag: GBCFlag,
@@ -139,16 +163,52 @@ pub const DATA_START: usize = 0x150;
 
 pub fn load(data: &[u8]) -> Result<GBBinary, String> {
     let mut reader = DataReader::new(data);
-    parse_vectors(&mut reader)?;
+    let restart_calls = parse_restart_calls(&mut reader)?;
+    let interrupts = parse_interrupts(&mut reader)?;
     let header = parse_header(&mut reader)?;
     let bank_data = parse_bank_data(&mut reader, header.rom_size)?;
 
-    Ok(GBBinary { header, bank_data })
+    Ok(GBBinary {
+        restart_calls,
+        interrupts,
+        header,
+        bank_data,
+    })
 }
 
-fn parse_vectors(reader: &mut DataReader) -> Result<(), String> {
-    reader.skip(0x100);
-    Ok(())
+fn parse_restart_calls(reader: &mut DataReader) -> Result<RestartCalls, String> {
+    let calls = RestartCalls {
+        rst_0: read_8_bytes(reader),
+        rst_1: read_8_bytes(reader),
+        rst_2: read_8_bytes(reader),
+        rst_3: read_8_bytes(reader),
+        rst_4: read_8_bytes(reader),
+        rst_5: read_8_bytes(reader),
+        rst_6: read_8_bytes(reader),
+        rst_7: read_8_bytes(reader),
+    };
+    Ok(calls)
+}
+
+fn parse_interrupts(reader: &mut DataReader) -> Result<Interrupts, String> {
+    let interrupts = Interrupts {
+        v_blank: read_8_bytes(reader),
+        lcd_stat: read_8_bytes(reader),
+        timer: read_8_bytes(reader),
+        serial: read_8_bytes(reader),
+        joypad: read_8_bytes(reader),
+    };
+
+    reader.skip(0x98);
+    Ok(interrupts)
+}
+
+fn read_8_bytes(reader: &mut DataReader) -> [u8; 8] {
+    let mut result = [0; 8];
+    for i in 0..8 {
+        result[i] = reader.read_u8();
+    }
+    result
 }
 
 fn parse_header(reader: &mut DataReader) -> Result<Header, String> {
@@ -158,7 +218,10 @@ fn parse_header(reader: &mut DataReader) -> Result<Header, String> {
         reader.read_u8(),
         reader.read_u8(),
     ];
-    reader.skip(48); // logo data
+    let mut logo_data = vec![0; 48];
+    for i in 0..48 {
+        logo_data[i] = reader.read_u8();
+    }
 
     let old_licensee_code = reader.read_u8_at(0x14B);
 
@@ -192,6 +255,7 @@ fn parse_header(reader: &mut DataReader) -> Result<Header, String> {
 
     Ok(Header {
         entry_point,
+        logo_data,
         game_title,
         manufacturer_code,
         gbc_flag,
