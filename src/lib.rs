@@ -13,23 +13,23 @@ pub struct GBBinary {
 
 #[derive(Serialize)]
 pub struct RestartCalls {
-    rst_0: [u8; 8],
-    rst_1: [u8; 8],
-    rst_2: [u8; 8],
-    rst_3: [u8; 8],
-    rst_4: [u8; 8],
-    rst_5: [u8; 8],
-    rst_6: [u8; 8],
-    rst_7: [u8; 8],
+    pub rst_0: [u8; 8],
+    pub rst_1: [u8; 8],
+    pub rst_2: [u8; 8],
+    pub rst_3: [u8; 8],
+    pub rst_4: [u8; 8],
+    pub rst_5: [u8; 8],
+    pub rst_6: [u8; 8],
+    pub rst_7: [u8; 8],
 }
 
 #[derive(Serialize)]
 pub struct Interrupts {
-    v_blank: [u8; 8],
-    lcd_stat: [u8; 8],
-    timer: [u8; 8],
-    serial: [u8; 8],
-    joypad: [u8; 8],
+    pub v_blank: [u8; 8],
+    pub lcd_stat: [u8; 8],
+    pub timer: [u8; 8],
+    pub serial: [u8; 8],
+    pub joypad: [u8; 8],
 }
 
 #[derive(Serialize, Debug)]
