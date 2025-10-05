@@ -390,6 +390,17 @@ fn clean_string(str: &str) -> String {
 
 fn parse_bank_data(reader: &mut DataReader, rom_size: ROMSize) -> Result<Vec<Vec<u8>>, String> {
     let n = num_banks(rom_size);
+
+    let expected_bytes = (BANK_BYTES * n) - DATA_START;
+
+    if reader.unread_bytes().len() < expected_bytes {
+        return Err(format!(
+            "illegal ROM, not enough bank data. Expected {} bytes, got {} bytes in ROM",
+            expected_bytes,
+            reader.unread_bytes().len()
+        ));
+    }
+
     let mut bank_data = Vec::with_capacity(n);
     for b in 0..n {
         let bank_size = if b == (n - 1) {
